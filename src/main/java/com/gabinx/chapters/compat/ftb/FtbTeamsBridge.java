@@ -2,12 +2,13 @@ package com.gabinx.chapters.compat.ftb;
 
 import dev.ftb.mods.ftbteams.api.FTBTeamsAPI;
 import dev.ftb.mods.ftbteams.api.Team;
-import dev.ftb.mods.ftbteams.api.event.TeamEvent;
 import dev.ftb.mods.ftbteams.api.event.TeamPropertiesChangedEvent;
+import dev.ftb.mods.ftbteams.api.neoforge.FTBTeamsEvent;
 import dev.ftb.mods.ftbteams.api.property.TeamProperties;
 import dev.ftb.mods.ftbteams.api.property.TeamPropertyCollection;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.common.NeoForge;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashSet;
@@ -44,16 +45,16 @@ final class FtbTeamsBridge {
     }
 
     /**
-     * @return the team's stage set as {@link ResourceLocation}s, or {@code null}
+     * @return the team's stage set as {@link Identifier}s, or {@code null}
      *         when the team manager is not loaded yet (caller should fall back).
      */
     @Nullable
-    static Set<ResourceLocation> viewStages(ServerPlayer player) {
+    static Set<Identifier> viewStages(ServerPlayer player) {
         Team team = teamOf(player);
         if (team == null) {
             return null;
         }
-        return toResourceLocations(safeReadStages(team));
+        return toIdentifiers(safeReadStages(team));
     }
 
     /**
@@ -61,7 +62,7 @@ final class FtbTeamsBridge {
      *         {@link Boolean#TRUE}/{@link Boolean#FALSE} otherwise.
      */
     @Nullable
-    static Boolean hasStage(ServerPlayer player, ResourceLocation stage) {
+    static Boolean hasStage(ServerPlayer player, Identifier stage) {
         Team team = teamOf(player);
         if (team == null) {
             return null;
@@ -69,7 +70,24 @@ final class FtbTeamsBridge {
         return safeReadStages(team).contains(stage.toString());
     }
 
-    static boolean addStage(ServerPlayer player, ResourceLocation stage) {
+    /**
+     * Snapshot of a team's TEAM_STAGES as mutable strings (empty when unset / shared default).
+     */
+    static Set<String> readStageStrings(Team team) {
+        return new HashSet<>(safeReadStages(team));
+    }
+
+    /**
+     * Replace the team's TEAM_STAGES with {@code stages} (copied) and notify listeners.
+     */
+    static void writeStageStrings(Team team, Set<String> stages) {
+        if (team == null || team.isClientTeam()) {
+            return;
+        }
+        commitStages(team, new HashSet<>(stages));
+    }
+
+    static boolean addStage(ServerPlayer player, Identifier stage) {
         Team team = teamOf(player);
         if (team == null || team.isClientTeam()) {
             return false;
@@ -82,7 +100,7 @@ final class FtbTeamsBridge {
         return true;
     }
 
-    static boolean removeStage(ServerPlayer player, ResourceLocation stage) {
+    static boolean removeStage(ServerPlayer player, Identifier stage) {
         Team team = teamOf(player);
         if (team == null || team.isClientTeam()) {
             return false;
@@ -118,14 +136,16 @@ final class FtbTeamsBridge {
     private static void commitStages(Team team, Set<String> next) {
         TeamPropertyCollection old = team.getProperties().copy();
         team.setProperty(TeamProperties.TEAM_STAGES, next);
-        TeamEvent.PROPERTIES_CHANGED.invoker().accept(new TeamPropertiesChangedEvent(team, old));
+        NeoForge.EVENT_BUS.post(new FTBTeamsEvent.TeamPropertiesChanged(
+                new TeamPropertiesChangedEvent.Data(team, old, false)
+        ));
         team.syncOnePropertyToTeam(TeamProperties.TEAM_STAGES, next);
     }
 
-    private static Set<ResourceLocation> toResourceLocations(Iterable<String> raw) {
-        Set<ResourceLocation> out = new LinkedHashSet<>();
+    private static Set<Identifier> toIdentifiers(Iterable<String> raw) {
+        Set<Identifier> out = new LinkedHashSet<>();
         for (String s : raw) {
-            ResourceLocation rl = ResourceLocation.tryParse(s);
+            Identifier rl = Identifier.tryParse(s);
             if (rl != null) {
                 out.add(rl);
             }

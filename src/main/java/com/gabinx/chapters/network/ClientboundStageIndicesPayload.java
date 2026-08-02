@@ -6,7 +6,7 @@ import com.gabinx.chapters.stage.ClientStageIndices;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.LinkedHashMap;
@@ -20,10 +20,10 @@ import java.util.Set;
  * {@link com.gabinx.chapters.compat.RecipeViewerCompat} can compute locked sets on the logical client.
  */
 public record ClientboundStageIndicesPayload(
-        Map<ResourceLocation, Set<ResourceLocation>> itemStages,
-        Map<ResourceLocation, Set<ResourceLocation>> fluidStages,
-        Map<ResourceLocation, Set<ResourceLocation>> chemicalStages,
-        Map<ResourceLocation, Set<ResourceLocation>> recipeStages
+        Map<Identifier, Set<Identifier>> itemStages,
+        Map<Identifier, Set<Identifier>> fluidStages,
+        Map<Identifier, Set<Identifier>> chemicalStages,
+        Map<Identifier, Set<Identifier>> recipeStages
 ) implements CustomPacketPayload {
 
     public ClientboundStageIndicesPayload {
@@ -34,7 +34,7 @@ public record ClientboundStageIndicesPayload(
     }
 
     public static final Type<ClientboundStageIndicesPayload> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(Chapters.MOD_ID, "stage_indices"));
+            new Type<>(Identifier.fromNamespaceAndPath(Chapters.MOD_ID, "stage_indices"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, ClientboundStageIndicesPayload> STREAM_CODEC =
             StreamCodec.of(ClientboundStageIndicesPayload::write, ClientboundStageIndicesPayload::read);
@@ -55,26 +55,26 @@ public record ClientboundStageIndicesPayload(
         return new ClientboundStageIndicesPayload(readMap(buf), readMap(buf), readMap(buf), readMap(buf));
     }
 
-    private static void writeMap(RegistryFriendlyByteBuf buf, Map<ResourceLocation, Set<ResourceLocation>> map) {
+    private static void writeMap(RegistryFriendlyByteBuf buf, Map<Identifier, Set<Identifier>> map) {
         buf.writeVarInt(map.size());
-        for (Map.Entry<ResourceLocation, Set<ResourceLocation>> e : map.entrySet()) {
-            ResourceLocation.STREAM_CODEC.encode(buf, e.getKey());
+        for (Map.Entry<Identifier, Set<Identifier>> e : map.entrySet()) {
+            Identifier.STREAM_CODEC.encode(buf, e.getKey());
             buf.writeVarInt(e.getValue().size());
-            for (ResourceLocation s : e.getValue()) {
-                ResourceLocation.STREAM_CODEC.encode(buf, s);
+            for (Identifier s : e.getValue()) {
+                Identifier.STREAM_CODEC.encode(buf, s);
             }
         }
     }
 
-    private static Map<ResourceLocation, Set<ResourceLocation>> readMap(RegistryFriendlyByteBuf buf) {
+    private static Map<Identifier, Set<Identifier>> readMap(RegistryFriendlyByteBuf buf) {
         int n = buf.readVarInt();
-        Map<ResourceLocation, Set<ResourceLocation>> map = new LinkedHashMap<>(n);
+        Map<Identifier, Set<Identifier>> map = new LinkedHashMap<>(n);
         for (int i = 0; i < n; i++) {
-            ResourceLocation key = ResourceLocation.STREAM_CODEC.decode(buf);
+            Identifier key = Identifier.STREAM_CODEC.decode(buf);
             int m = buf.readVarInt();
-            LinkedHashSet<ResourceLocation> values = new LinkedHashSet<>(Math.max(m, 1));
+            LinkedHashSet<Identifier> values = new LinkedHashSet<>(Math.max(m, 1));
             for (int j = 0; j < m; j++) {
-                values.add(ResourceLocation.STREAM_CODEC.decode(buf));
+                values.add(Identifier.STREAM_CODEC.decode(buf));
             }
             map.put(key, values);
         }

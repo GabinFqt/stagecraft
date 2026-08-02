@@ -20,7 +20,7 @@ public final class ChaptersRegistries {
     public static final Supplier<AttachmentType<PlayerStages>> PLAYER_STAGES = ATTACHMENTS.register(
             "player_stages",
             () -> AttachmentType.builder(PlayerStages::empty)
-                    .serialize(PlayerStages.CODEC)
+                    .serialize(PlayerStages.MAP_CODEC)
                     .copyOnDeath()
                     .build()
     );

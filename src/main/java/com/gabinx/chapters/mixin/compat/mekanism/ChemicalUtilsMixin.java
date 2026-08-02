@@ -11,7 +11,7 @@ import mekanism.api.container.InContainerGetter;
 import mekanism.api.container.ContainerInteraction;
 import mekanism.api.container.LongContainerInteraction;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
@@ -36,7 +36,7 @@ public abstract class ChemicalUtilsMixin {
     }
 
     private static boolean isLocked(ServerPlayer player, ChemicalStack stack) {
-        ResourceLocation key = MekanismAPI.CHEMICAL_REGISTRY.getKey(stack.getChemical());
+        Identifier key = MekanismAPI.CHEMICAL_REGISTRY.getKey(stack.getChemical());
         return key != null && LockResolver.isChemicalLocked(player, key);
     }
 

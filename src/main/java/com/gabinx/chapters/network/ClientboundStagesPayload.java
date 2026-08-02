@@ -7,19 +7,19 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-public record ClientboundStagesPayload(Set<ResourceLocation> stages) implements CustomPacketPayload {
+public record ClientboundStagesPayload(Set<Identifier> stages) implements CustomPacketPayload {
     public static final Type<ClientboundStagesPayload> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(Chapters.MOD_ID, "stages"));
+            new Type<>(Identifier.fromNamespaceAndPath(Chapters.MOD_ID, "stages"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, ClientboundStagesPayload> STREAM_CODEC =
             StreamCodec.composite(
-                    ByteBufCodecs.collection(LinkedHashSet::new, ResourceLocation.STREAM_CODEC),
+                    ByteBufCodecs.collection(LinkedHashSet::new, Identifier.STREAM_CODEC),
                     ClientboundStagesPayload::stages,
                     ClientboundStagesPayload::new
             );

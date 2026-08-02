@@ -2,7 +2,7 @@ package com.gabinx.chapters.compat.ftb;
 
 import com.gabinx.chapters.ChaptersRegistries;
 import com.gabinx.chapters.stage.PlayerStages;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.LinkedHashSet;
@@ -28,9 +28,9 @@ public final class EffectiveStages {
      * Snapshot of effective stage ids for this player. Mutating the returned
      * set has no effect.
      */
-    public static Set<ResourceLocation> of(ServerPlayer player) {
+    public static Set<Identifier> of(ServerPlayer player) {
         if (FtbCompat.isTeamsLoaded()) {
-            Set<ResourceLocation> teamView = FtbTeamsBridge.viewStages(player);
+            Set<Identifier> teamView = FtbTeamsBridge.viewStages(player);
             if (teamView != null) {
                 return teamView;
             }
@@ -46,7 +46,7 @@ public final class EffectiveStages {
     /**
      * @return {@code true} if the stage was actually added (was not present before).
      */
-    public static boolean add(ServerPlayer player, ResourceLocation stage) {
+    public static boolean add(ServerPlayer player, Identifier stage) {
         if (FtbCompat.isTeamsLoaded() && FtbTeamsBridge.hasTeam(player)) {
             return FtbTeamsBridge.addStage(player, stage);
         }
@@ -61,7 +61,7 @@ public final class EffectiveStages {
     /**
      * @return {@code true} if the stage was actually removed (was present before).
      */
-    public static boolean remove(ServerPlayer player, ResourceLocation stage) {
+    public static boolean remove(ServerPlayer player, Identifier stage) {
         if (FtbCompat.isTeamsLoaded() && FtbTeamsBridge.hasTeam(player)) {
             return FtbTeamsBridge.removeStage(player, stage);
         }
@@ -73,7 +73,7 @@ public final class EffectiveStages {
         return changed;
     }
 
-    public static boolean has(ServerPlayer player, ResourceLocation stage) {
+    public static boolean has(ServerPlayer player, Identifier stage) {
         if (FtbCompat.isTeamsLoaded()) {
             Boolean teamHas = FtbTeamsBridge.hasStage(player, stage);
             if (teamHas != null) {

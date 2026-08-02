@@ -31,6 +31,10 @@ testing/
 # Accidentally vendored sources (do not commit)
 net/
 
+# Portage / probe leftovers
+tmp-*/
+tmp-*.sh
+
 # OS / misc
 .DS_Store
 *.class

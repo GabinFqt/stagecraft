@@ -1,7 +1,7 @@
 package com.gabinx.chapters.compat.kubejs.bindings;
 
 import com.gabinx.chapters.compat.kubejs.ChaptersKubeJSBridge;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -18,7 +18,7 @@ public final class ChaptersEventsBinding {
      * {@code defineStage('namespace:stage_id', ['minecraft:apple', '#minecraft:axes'])}.
      */
     public void defineStage(String id, Collection<?> locks) {
-        ResourceLocation stageId = ResourceLocation.tryParse(id);
+        Identifier stageId = Identifier.tryParse(id);
         if (stageId == null || locks == null) {
             return;
         }
@@ -34,7 +34,7 @@ public final class ChaptersEventsBinding {
     }
 
     public void clearStage(String id) {
-        ResourceLocation stageId = ResourceLocation.tryParse(id);
+        Identifier stageId = Identifier.tryParse(id);
         if (stageId != null) {
             ChaptersKubeJSBridge.clearStage(stageId);
         }

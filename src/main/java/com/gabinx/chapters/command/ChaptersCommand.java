@@ -10,9 +10,9 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
-import net.minecraft.commands.arguments.ResourceLocationArgument;
+import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Set;
@@ -29,33 +29,33 @@ public final class ChaptersCommand {
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher.register(Commands.literal("chapters")
-                .requires(source -> source.hasPermission(2))
+                .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                 .then(Commands.literal("add")
                         .then(Commands.argument("player", EntityArgument.player())
-                                .then(Commands.argument("stage", ResourceLocationArgument.id())
+                                .then(Commands.argument("stage", IdentifierArgument.id())
                                         .suggests(STAGE_SUGGESTIONS)
                                         .executes(ctx -> {
                                             ServerPlayer player = EntityArgument.getPlayer(ctx, "player");
-                                            ResourceLocation stage = ResourceLocationArgument.getId(ctx, "stage");
+                                            Identifier stage = IdentifierArgument.getId(ctx, "stage");
                                             validateStage(stage);
                                             ChaptersAPI.addStage(player, stage);
                                             ctx.getSource().sendSuccess(
-                                                    () -> Component.translatable("commands.chapters.add.success", stage.toString(), player.getGameProfile().getName()),
+                                                    () -> Component.translatable("commands.chapters.add.success", stage.toString(), player.getGameProfile().name()),
                                                     true
                                             );
                                             return 1;
                                         }))))
                 .then(Commands.literal("remove")
                         .then(Commands.argument("player", EntityArgument.player())
-                                .then(Commands.argument("stage", ResourceLocationArgument.id())
+                                .then(Commands.argument("stage", IdentifierArgument.id())
                                         .suggests(STAGE_SUGGESTIONS)
                                         .executes(ctx -> {
                                             ServerPlayer player = EntityArgument.getPlayer(ctx, "player");
-                                            ResourceLocation stage = ResourceLocationArgument.getId(ctx, "stage");
+                                            Identifier stage = IdentifierArgument.getId(ctx, "stage");
                                             validateStage(stage);
                                             ChaptersAPI.removeStage(player, stage);
                                             ctx.getSource().sendSuccess(
-                                                    () -> Component.translatable("commands.chapters.remove.success", stage.toString(), player.getGameProfile().getName()),
+                                                    () -> Component.translatable("commands.chapters.remove.success", stage.toString(), player.getGameProfile().name()),
                                                     true
                                             );
                                             return 1;
@@ -64,28 +64,28 @@ public final class ChaptersCommand {
                         .then(Commands.argument("player", EntityArgument.player())
                                 .executes(ctx -> {
                                     ServerPlayer player = EntityArgument.getPlayer(ctx, "player");
-                                    Set<ResourceLocation> values = ChaptersAPI.getStages(player);
+                                    Set<Identifier> values = ChaptersAPI.getStages(player);
                                     String joined = values.isEmpty()
                                             ? "-"
-                                            : values.stream().map(ResourceLocation::toString).collect(Collectors.joining(", "));
+                                            : values.stream().map(Identifier::toString).collect(Collectors.joining(", "));
                                     ctx.getSource().sendSuccess(
-                                            () -> Component.translatable("commands.chapters.list.header", player.getGameProfile().getName(), joined),
+                                            () -> Component.translatable("commands.chapters.list.header", player.getGameProfile().name(), joined),
                                             false
                                     );
                                     return values.size();
                                 })))
                 .then(Commands.literal("check")
                         .then(Commands.argument("player", EntityArgument.player())
-                                .then(Commands.argument("stage", ResourceLocationArgument.id())
+                                .then(Commands.argument("stage", IdentifierArgument.id())
                                         .suggests(STAGE_SUGGESTIONS)
                                         .executes(ctx -> {
                                             ServerPlayer player = EntityArgument.getPlayer(ctx, "player");
-                                            ResourceLocation stage = ResourceLocationArgument.getId(ctx, "stage");
+                                            Identifier stage = IdentifierArgument.getId(ctx, "stage");
                                             boolean has = ChaptersAPI.hasStage(player, stage);
                                             ctx.getSource().sendSuccess(
                                                     () -> Component.translatable(
                                                             has ? "commands.chapters.check.true" : "commands.chapters.check.false",
-                                                            player.getGameProfile().getName(),
+                                                            player.getGameProfile().name(),
                                                             stage.toString()
                                                     ),
                                                     false
@@ -103,7 +103,7 @@ public final class ChaptersCommand {
                         })));
     }
 
-    private static void validateStage(ResourceLocation stage) throws CommandSyntaxException {
+    private static void validateStage(Identifier stage) throws CommandSyntaxException {
         if (!StageManager.get().stageIds().contains(stage)) {
             throw new SimpleCommandExceptionType(
                     Component.translatable("commands.chapters.error.unknown_stage", stage.toString())

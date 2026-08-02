@@ -2,7 +2,7 @@ package com.gabinx.chapters.event;
 
 import com.gabinx.chapters.stage.LockResolver;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.Container;
@@ -38,14 +38,14 @@ public final class CraftingHandler {
         player.containerMenu.broadcastChanges();
 
         if (recipeLocked && !itemLocked) {
-            player.displayClientMessage(
+            player.sendSystemMessage(
                     Component.translatable("commands.chapters.craft.blocked_recipe", crafted.getHoverName()),
                     true
             );
             return;
         }
 
-        player.displayClientMessage(
+        player.sendSystemMessage(
                 Component.translatable("commands.chapters.craft.blocked", crafted.getHoverName()),
                 true
         );
@@ -55,14 +55,11 @@ public final class CraftingHandler {
         if (crafted.isEmpty() || !(craftMatrix instanceof CraftingContainer crafting)) {
             return false;
         }
-        if (player.level() == null || player.level().isClientSide) {
-            return false;
-        }
-        Optional<ResourceLocation> recipeId =
-                player.level().getRecipeManager().getRecipeFor(
+        Optional<Identifier> recipeId =
+                player.level().recipeAccess().getRecipeFor(
                         RecipeType.CRAFTING,
                         crafting.asCraftInput(),
-                        player.level()).map(RecipeHolder<CraftingRecipe>::id);
+                        player.level()).map(holder -> holder.id().identifier());
         return recipeId.map(id -> LockResolver.isRecipeLocked(player, id)).orElse(false);
     }
 

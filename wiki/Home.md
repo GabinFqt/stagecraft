@@ -1,4 +1,4 @@
-**Chapters** is a progression mod for **NeoForge 1.21.1** (requires **Java 21**). You gate **items, fluids, Mekanism chemicals**, and **recipes by id** behind named *stages* using **datapacks** and optionally **KubeJS**, with optional **JEI** integration so players see what they can actually use.
+**Chapters** is a progression mod for **NeoForge 26.1.2** (requires **Java 25**). You gate **items, fluids, Mekanism chemicals**, and **recipes by id** behind named *stages* using **datapacks** and optionally **KubeJS**, with optional **JEI** integration so players see what they can actually use.
 
 - **[Download releases](https://github.com/GabinFqt/chapters/releases)** (jar for your mods folder)
 - **Something wrong or missing from the wiki?** [Open an issue](https://github.com/GabinFqt/chapters/issues)

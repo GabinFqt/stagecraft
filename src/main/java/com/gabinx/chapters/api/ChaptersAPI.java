@@ -7,7 +7,7 @@ import com.gabinx.chapters.network.ClientboundStageIndicesPayload;
 import com.gabinx.chapters.network.ClientboundStagesPayload;
 import com.gabinx.chapters.stage.StageDefinition;
 import com.gabinx.chapters.stage.StageManager;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
@@ -19,7 +19,7 @@ public final class ChaptersAPI {
     private ChaptersAPI() {
     }
 
-    public static boolean addStage(ServerPlayer player, ResourceLocation stageId) {
+    public static boolean addStage(ServerPlayer player, Identifier stageId) {
         boolean changed = EffectiveStages.add(player, stageId);
         if (changed && EffectiveStages.shouldEmitPerPlayerDelta(player)) {
             PacketDistributor.sendToPlayer(player, new ClientboundStageDeltaPayload(stageId, true));
@@ -27,7 +27,7 @@ public final class ChaptersAPI {
         return changed;
     }
 
-    public static boolean removeStage(ServerPlayer player, ResourceLocation stageId) {
+    public static boolean removeStage(ServerPlayer player, Identifier stageId) {
         boolean changed = EffectiveStages.remove(player, stageId);
         if (changed && EffectiveStages.shouldEmitPerPlayerDelta(player)) {
             PacketDistributor.sendToPlayer(player, new ClientboundStageDeltaPayload(stageId, false));
@@ -36,15 +36,15 @@ public final class ChaptersAPI {
         return changed;
     }
 
-    public static boolean hasStage(ServerPlayer player, ResourceLocation stageId) {
+    public static boolean hasStage(ServerPlayer player, Identifier stageId) {
         return EffectiveStages.has(player, stageId);
     }
 
-    public static Set<ResourceLocation> getStages(ServerPlayer player) {
+    public static Set<Identifier> getStages(ServerPlayer player) {
         return EffectiveStages.of(player);
     }
 
-    public static Optional<StageDefinition> getDefinition(ResourceLocation stageId) {
+    public static Optional<StageDefinition> getDefinition(Identifier stageId) {
         return StageManager.get().get(stageId);
     }
 

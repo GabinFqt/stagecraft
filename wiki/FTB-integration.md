@@ -24,7 +24,8 @@ When **FTB Teams** is also loaded, chapter unlocks become **team-scoped** instea
 
 - Every member of a `PartyTeam` shares unlocks instantly. Claiming a Stage Reward, running `/chapters add`, calling `PlayerStages.of(player).add(...)` from KubeJS — all of them write to the team store and trigger the inventory auditor + JEI hide/reveal for every online member.
 - A solo player has their own personal team (`PlayerTeam`), so their unlocks stay tied to them as long as they don't join a party.
-- When a player **joins** a party they adopt the party's stages (their previous personal-team unlocks are dropped). When a player **leaves** a party, FTB Teams creates them a fresh `PlayerTeam` with no stages.
+- When a player **joins** a party, Chapters **merges** their previous personal stages with the party's stages (union). Everyone in the party then has the combined set.
+- When a player **leaves** a party, they keep a **snapshot** of the party's stages on their new personal team, but that copy is no longer synced with the party (further unlocks on either side stay separate).
 - The very first time a player logs in after FTB Teams is added to a pre-existing world, Chapters migrates any pre-existing per-player attachment unlocks into their personal `TEAM_STAGES`. Party teams are skipped during migration to avoid leaking personal stages into a party.
 
 Everything routes through the same path — `/chapters add/remove`, KubeJS, datapack hooks, FTB Quests Stage Reward, the inventory auditor, JEI sync, and the FTB Teams GUI all converge on `TEAM_STAGES`.

@@ -10,17 +10,19 @@ import mezz.jei.api.recipe.IFocus;
 import mezz.jei.api.recipe.IRecipeLookup;
 import mezz.jei.api.recipe.IRecipeManager;
 import mezz.jei.api.recipe.RecipeIngredientRole;
-import mezz.jei.api.recipe.RecipeType;
+import mezz.jei.api.recipe.types.IRecipeType;
 import mezz.jei.api.runtime.IIngredientManager;
 import mezz.jei.api.runtime.IJeiRuntime;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.context.ContextMap;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.display.RecipeDisplay;
+import net.minecraft.world.item.crafting.display.SlotDisplayContext;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 import net.neoforged.fml.ModList;
@@ -49,36 +51,36 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
     @Nullable
     private static IJeiRuntime runtime;
 
-    private static final Set<ResourceLocation> lastLockedItems = new LinkedHashSet<>();
-    private static final Set<ResourceLocation> lastLockedFluids = new LinkedHashSet<>();
-    private static final Set<ResourceLocation> lastLockedChemicals = new LinkedHashSet<>();
-    private static final Set<ResourceLocation> lastLockedRecipes = new LinkedHashSet<>();
+    private static final Set<Identifier> lastLockedItems = new LinkedHashSet<>();
+    private static final Set<Identifier> lastLockedFluids = new LinkedHashSet<>();
+    private static final Set<Identifier> lastLockedChemicals = new LinkedHashSet<>();
+    private static final Set<Identifier> lastLockedRecipes = new LinkedHashSet<>();
 
     /** Item id → ingredient stacks removed from JEI so we can add them back verbatim. */
-    private static final Map<ResourceLocation, List<ItemStack>> ingredientSnapshots = new HashMap<>();
+    private static final Map<Identifier, List<ItemStack>> ingredientSnapshots = new HashMap<>();
 
     /** Fluid id → ingredient stacks removed from JEI so we can add them back verbatim. */
-    private static final Map<ResourceLocation, List<FluidStack>> fluidIngredientSnapshots = new HashMap<>();
+    private static final Map<Identifier, List<FluidStack>> fluidIngredientSnapshots = new HashMap<>();
 
     /** Mekanism chemical id → ingredient stacks removed from JEI so we can add them back verbatim. */
-    private static final Map<ResourceLocation, List<Object>> chemicalIngredientSnapshots = new HashMap<>();
+    private static final Map<Identifier, List<Object>> chemicalIngredientSnapshots = new HashMap<>();
 
     /** Item id → recipes hidden for this lock pass (list keeps duplicates in sync with ref counts). */
-    private static final Map<ResourceLocation, List<HiddenRecipe>> recipesByLockingItem = new HashMap<>();
+    private static final Map<Identifier, List<HiddenRecipe>> recipesByLockingItem = new HashMap<>();
 
-    private static final Map<ResourceLocation, List<HiddenRecipe>> recipesByLockingFluid = new HashMap<>();
+    private static final Map<Identifier, List<HiddenRecipe>> recipesByLockingFluid = new HashMap<>();
 
-    private static final Map<ResourceLocation, List<HiddenRecipe>> recipesByLockingChemical = new HashMap<>();
+    private static final Map<Identifier, List<HiddenRecipe>> recipesByLockingChemical = new HashMap<>();
 
-    private static final Map<ResourceLocation, List<HiddenRecipe>> recipesByLockingRecipeId = new HashMap<>();
+    private static final Map<Identifier, List<HiddenRecipe>> recipesByLockingRecipeId = new HashMap<>();
 
     private static final Map<HiddenRecipe, Integer> recipeHideRefCount = new HashMap<>();
 
     static void applyLocked(
-            Set<ResourceLocation> newLockedItems,
-            Set<ResourceLocation> newLockedFluids,
-            Set<ResourceLocation> newLockedChemicals,
-            Set<ResourceLocation> newLockedRecipes
+            Set<Identifier> newLockedItems,
+            Set<Identifier> newLockedFluids,
+            Set<Identifier> newLockedChemicals,
+            Set<Identifier> newLockedRecipes
     ) {
         synchronized (LOCK) {
             if (runtime == null) {
@@ -90,24 +92,24 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
             IRecipeManager recipeManager = jei.getRecipeManager();
             Optional<IIngredientType<FluidStack>> fluidTypeOpt = ingredients.getIngredientTypeChecked(FluidStack.class);
 
-            Set<ResourceLocation> itemsToLock = new LinkedHashSet<>(newLockedItems);
+            Set<Identifier> itemsToLock = new LinkedHashSet<>(newLockedItems);
             itemsToLock.removeAll(lastLockedItems);
-            Set<ResourceLocation> itemsToUnlock = new LinkedHashSet<>(lastLockedItems);
+            Set<Identifier> itemsToUnlock = new LinkedHashSet<>(lastLockedItems);
             itemsToUnlock.removeAll(newLockedItems);
 
             // Restore every newly-unlocked ingredient first, then reconcile recipes (golden apple crafting needs apple +
             // gold ingot stacks back in JEI before output-recipe lookups/re-hides reliably apply across versions).
-            for (ResourceLocation id : itemsToUnlock) {
+            for (Identifier id : itemsToUnlock) {
                 restoreItemIngredients(ingredients, id);
             }
-            for (ResourceLocation id : itemsToUnlock) {
+            for (Identifier id : itemsToUnlock) {
                 revealRecipesForItem(jei, recipeManager, id);
             }
             // Hide crafting recipes BEFORE removing stacks from JEI ingredients: focus-based recipe lookup relies on the
             // ingredient index still listing outputs; otherwise lookups return nothing, we never register hides, yet the
             // UI can stay inconsistent until unlock (golden apple unlocked but craft tab empty).
             hideOutputRecipesForItemsBatch(jei, recipeManager, itemsToLock);
-            for (ResourceLocation id : itemsToLock) {
+            for (Identifier id : itemsToLock) {
                 hideIngredientsForItem(ingredients, id);
             }
 
@@ -116,18 +118,18 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
 
             if (fluidTypeOpt.isPresent()) {
                 IIngredientType<FluidStack> fluidType = fluidTypeOpt.get();
-                Set<ResourceLocation> fluidsToLock = new LinkedHashSet<>(newLockedFluids);
+                Set<Identifier> fluidsToLock = new LinkedHashSet<>(newLockedFluids);
                 fluidsToLock.removeAll(lastLockedFluids);
-                Set<ResourceLocation> fluidsToUnlock = new LinkedHashSet<>(lastLockedFluids);
+                Set<Identifier> fluidsToUnlock = new LinkedHashSet<>(lastLockedFluids);
                 fluidsToUnlock.removeAll(newLockedFluids);
 
-                for (ResourceLocation id : fluidsToUnlock) {
+                for (Identifier id : fluidsToUnlock) {
                     restoreFluidIngredients(ingredients, fluidType, id);
                 }
-                for (ResourceLocation id : fluidsToUnlock) {
+                for (Identifier id : fluidsToUnlock) {
                     revealRecipesForFluid(jei, recipeManager, fluidType, id);
                 }
-                for (ResourceLocation id : fluidsToLock) {
+                for (Identifier id : fluidsToLock) {
                     hideOutputRecipesForFluid(jei, recipeManager, fluidType, id);
                     hideIngredientsForFluid(ingredients, fluidType, id);
                 }
@@ -139,18 +141,18 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
             Optional<IIngredientType<Object>> chemicalTypeOpt = mekanismChemicalIngredientType();
             if (chemicalTypeOpt.isPresent()) {
                 IIngredientType<Object> chemicalType = chemicalTypeOpt.get();
-                Set<ResourceLocation> chemicalsToLock = new LinkedHashSet<>(newLockedChemicals);
+                Set<Identifier> chemicalsToLock = new LinkedHashSet<>(newLockedChemicals);
                 chemicalsToLock.removeAll(lastLockedChemicals);
-                Set<ResourceLocation> chemicalsToUnlock = new LinkedHashSet<>(lastLockedChemicals);
+                Set<Identifier> chemicalsToUnlock = new LinkedHashSet<>(lastLockedChemicals);
                 chemicalsToUnlock.removeAll(newLockedChemicals);
 
-                for (ResourceLocation id : chemicalsToUnlock) {
+                for (Identifier id : chemicalsToUnlock) {
                     restoreChemicalIngredients(ingredients, chemicalType, id);
                 }
-                for (ResourceLocation id : chemicalsToUnlock) {
+                for (Identifier id : chemicalsToUnlock) {
                     revealRecipesForChemical(jei, recipeManager, chemicalType, id);
                 }
-                for (ResourceLocation id : chemicalsToLock) {
+                for (Identifier id : chemicalsToLock) {
                     hideOutputRecipesForChemical(jei, recipeManager, chemicalType, id);
                     hideIngredientsForChemical(ingredients, chemicalType, id);
                 }
@@ -159,12 +161,12 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
             lastLockedChemicals.clear();
             lastLockedChemicals.addAll(newLockedChemicals);
 
-            Set<ResourceLocation> recipesToLock = new LinkedHashSet<>(newLockedRecipes);
+            Set<Identifier> recipesToLock = new LinkedHashSet<>(newLockedRecipes);
             recipesToLock.removeAll(lastLockedRecipes);
-            Set<ResourceLocation> recipesToUnlock = new LinkedHashSet<>(lastLockedRecipes);
+            Set<Identifier> recipesToUnlock = new LinkedHashSet<>(lastLockedRecipes);
             recipesToUnlock.removeAll(newLockedRecipes);
 
-            for (ResourceLocation id : recipesToUnlock) {
+            for (Identifier id : recipesToUnlock) {
                 revealRecipesForRecipeId(recipeManager, id);
             }
             hideRecipesWithIds(jei, recipeManager, recipesToLock);
@@ -177,22 +179,22 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
     private static void hideRecipesWithIds(
             IJeiRuntime jei,
             IRecipeManager recipeManager,
-            Set<ResourceLocation> idsToLock
+            Set<Identifier> idsToLock
     ) {
         if (idsToLock.isEmpty()) {
             return;
         }
-        Map<ResourceLocation, List<HiddenRecipe>> contributedById = new LinkedHashMap<>();
-        for (ResourceLocation id : idsToLock) {
+        Map<Identifier, List<HiddenRecipe>> contributedById = new LinkedHashMap<>();
+        for (Identifier id : idsToLock) {
             contributedById.put(id, new ArrayList<>());
         }
-        for (RecipeType<?> recipeType : jei.getJeiHelpers().getAllRecipeTypes().toList()) {
+        for (IRecipeType<?> recipeType : jei.getJeiHelpers().getAllRecipeTypes().toList()) {
             IRecipeLookup<?> lookup = recipeManager.createRecipeLookup(recipeType);
             for (Object recipe : lookup.get().toList()) {
                 if (!(recipe instanceof RecipeHolder<?> holder)) {
                     continue;
                 }
-                ResourceLocation hid = holder.id();
+                Identifier hid = holder.id().identifier();
                 if (!idsToLock.contains(hid)) {
                     continue;
                 }
@@ -204,7 +206,7 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
                 }
             }
         }
-        for (ResourceLocation rid : idsToLock) {
+        for (Identifier rid : idsToLock) {
             List<HiddenRecipe> contribution = contributedById.get(rid);
             if (contribution != null && !contribution.isEmpty()) {
                 recipesByLockingRecipeId.put(rid, List.copyOf(contribution));
@@ -212,28 +214,28 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
         }
     }
 
-    private static void revealRecipesForRecipeId(IRecipeManager recipeManager, ResourceLocation recipeId) {
+    private static void revealRecipesForRecipeId(IRecipeManager recipeManager, Identifier recipeId) {
         List<HiddenRecipe> contributed = recipesByLockingRecipeId.remove(recipeId);
         revealContributedRecipes(recipeManager, contributed);
     }
 
-    private static void restoreItemIngredients(IIngredientManager ingredients, ResourceLocation itemId) {
+    private static void restoreItemIngredients(IIngredientManager ingredients, Identifier itemId) {
         List<ItemStack> stacks = ingredientSnapshots.remove(itemId);
         if (stacks != null && !stacks.isEmpty()) {
             ingredients.addIngredientsAtRuntime(VanillaTypes.ITEM_STACK, stacks);
         }
     }
 
-    private static void restoreFluidIngredients(IIngredientManager ingredients, IIngredientType<FluidStack> fluidType, ResourceLocation fluidId) {
+    private static void restoreFluidIngredients(IIngredientManager ingredients, IIngredientType<FluidStack> fluidType, Identifier fluidId) {
         List<FluidStack> stacks = fluidIngredientSnapshots.remove(fluidId);
         if (stacks != null && !stacks.isEmpty()) {
             ingredients.addIngredientsAtRuntime(fluidType, stacks);
         }
     }
 
-    private static void hideIngredientsForItem(IIngredientManager ingredients, ResourceLocation itemId) {
-        Item item = BuiltInRegistries.ITEM.get(itemId);
-        if (new ItemStack(item).isEmpty()) {
+    private static void hideIngredientsForItem(IIngredientManager ingredients, Identifier itemId) {
+        Item item = BuiltInRegistries.ITEM.getValue(itemId);
+        if (item == null || new ItemStack(item).isEmpty()) {
             return;
         }
         List<ItemStack> toHide = ingredients.getAllItemStacks().stream()
@@ -248,9 +250,9 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
     private static void hideIngredientsForFluid(
         IIngredientManager ingredients,
         IIngredientType<FluidStack> fluidType,
-        ResourceLocation fluidId
+        Identifier fluidId
     ) {
-        Fluid fluid = BuiltInRegistries.FLUID.get(fluidId);
+        Fluid fluid = BuiltInRegistries.FLUID.getValue(fluidId);
         if (fluid == null || fluid == Fluids.EMPTY) {
             return;
         }
@@ -269,7 +271,7 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
     private static void hideOutputRecipesForItemsBatch(
             IJeiRuntime jei,
             IRecipeManager recipeManager,
-            Set<ResourceLocation> itemsToLock
+            Set<Identifier> itemsToLock
     ) {
         if (itemsToLock.isEmpty()) {
             return;
@@ -277,15 +279,15 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
 
         HolderLookup.Provider registryAccess = safeRegistryAccess();
         if (registryAccess == null) {
-            for (ResourceLocation itemId : itemsToLock) {
+            for (Identifier itemId : itemsToLock) {
                 hideOutputRecipesForItem(jei, recipeManager, itemId);
             }
             return;
         }
 
         List<IFocus<?>> allFoci = new ArrayList<>();
-        for (ResourceLocation itemId : itemsToLock) {
-            ItemStack probe = new ItemStack(BuiltInRegistries.ITEM.get(itemId));
+        for (Identifier itemId : itemsToLock) {
+            ItemStack probe = BuiltInRegistries.ITEM.get(itemId).map(ItemStack::new).orElse(ItemStack.EMPTY);
             if (!probe.isEmpty()) {
                 allFoci.add(jei.getJeiHelpers().getFocusFactory()
                         .createFocus(RecipeIngredientRole.OUTPUT, VanillaTypes.ITEM_STACK, probe));
@@ -295,21 +297,21 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
             return;
         }
 
-        Map<ResourceLocation, List<HiddenRecipe>> contributedByItem = new LinkedHashMap<>();
-        for (ResourceLocation id : itemsToLock) {
+        Map<Identifier, List<HiddenRecipe>> contributedByItem = new LinkedHashMap<>();
+        for (Identifier id : itemsToLock) {
             contributedByItem.put(id, new ArrayList<>());
         }
 
-        for (RecipeType<?> recipeType : jei.getJeiHelpers().getAllRecipeTypes().toList()) {
+        for (IRecipeType<?> recipeType : jei.getJeiHelpers().getAllRecipeTypes().toList()) {
             IRecipeLookup<?> lookup = recipeManager.createRecipeLookup(recipeType);
             List<?> found = lookup.limitFocus(allFoci).get().toList();
             for (Object recipe : found) {
                 HiddenRecipe hr = new HiddenRecipe(recipeType, recipe);
-                Set<ResourceLocation> outputs = extractOutputItemIds(recipe, registryAccess);
+                Set<Identifier> outputs = extractOutputItemIds(recipe, registryAccess);
                 if (outputs.isEmpty()) {
                     continue;
                 }
-                for (ResourceLocation itemId : itemsToLock) {
+                for (Identifier itemId : itemsToLock) {
                     if (outputs.contains(itemId)) {
                         contributedByItem.get(itemId).add(hr);
                         int refs = recipeHideRefCount.merge(hr, 1, Integer::sum);
@@ -321,7 +323,7 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
             }
         }
 
-        for (ResourceLocation itemId : itemsToLock) {
+        for (Identifier itemId : itemsToLock) {
             List<HiddenRecipe> contribution = contributedByItem.get(itemId);
             if (contribution != null && !contribution.isEmpty()) {
                 recipesByLockingItem.put(itemId, List.copyOf(contribution));
@@ -335,12 +337,20 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
         return mc.level != null ? mc.level.registryAccess() : null;
     }
 
-    private static Set<ResourceLocation> extractOutputItemIds(Object recipe, HolderLookup.Provider registryAccess) {
-        Set<ResourceLocation> ids = new LinkedHashSet<>();
-        if (recipe instanceof RecipeHolder<?> holder && holder.value() instanceof Recipe<?> value) {
-            ItemStack out = value.getResultItem(registryAccess);
-            if (!out.isEmpty()) {
-                ResourceLocation key = BuiltInRegistries.ITEM.getKey(out.getItem());
+    private static Set<Identifier> extractOutputItemIds(Object recipe, HolderLookup.Provider registryAccess) {
+        Set<Identifier> ids = new LinkedHashSet<>();
+        if (!(recipe instanceof RecipeHolder<?> holder)) {
+            return ids;
+        }
+        ContextMap context = new ContextMap.Builder()
+                .withParameter(SlotDisplayContext.REGISTRIES, registryAccess)
+                .create(SlotDisplayContext.CONTEXT);
+        for (RecipeDisplay display : holder.value().display()) {
+            for (ItemStack out : display.result().resolveForStacks(context)) {
+                if (out.isEmpty()) {
+                    continue;
+                }
+                Identifier key = BuiltInRegistries.ITEM.getKey(out.getItem());
                 if (key != null) {
                     ids.add(key);
                 }
@@ -349,8 +359,8 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
         return ids;
     }
 
-    private static void hideOutputRecipesForItem(IJeiRuntime jei, IRecipeManager recipeManager, ResourceLocation itemId) {
-        ItemStack probe = new ItemStack(BuiltInRegistries.ITEM.get(itemId));
+    private static void hideOutputRecipesForItem(IJeiRuntime jei, IRecipeManager recipeManager, Identifier itemId) {
+        ItemStack probe = BuiltInRegistries.ITEM.get(itemId).map(ItemStack::new).orElse(ItemStack.EMPTY);
         if (probe.isEmpty()) {
             return;
         }
@@ -369,9 +379,9 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
         IJeiRuntime jei,
         IRecipeManager recipeManager,
         IIngredientType<FluidStack> fluidType,
-        ResourceLocation fluidId
+        Identifier fluidId
     ) {
-        Fluid fluid = BuiltInRegistries.FLUID.get(fluidId);
+        Fluid fluid = BuiltInRegistries.FLUID.getValue(fluidId);
         if (fluid == null || fluid == Fluids.EMPTY) {
             return;
         }
@@ -392,7 +402,7 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
 
     private static List<HiddenRecipe> collectOutputRecipes(IJeiRuntime jei, IRecipeManager recipeManager, List<? extends IFocus<?>> foci) {
         List<HiddenRecipe> contributed = new ArrayList<>();
-        for (RecipeType<?> recipeType : jei.getJeiHelpers().getAllRecipeTypes().toList()) {
+        for (IRecipeType<?> recipeType : jei.getJeiHelpers().getAllRecipeTypes().toList()) {
             IRecipeLookup<?> lookup = recipeManager.createRecipeLookup(recipeType);
             List<?> found = lookup.limitFocus(foci).get().toList();
             for (Object recipe : found) {
@@ -408,7 +418,7 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
         return contributed;
     }
 
-    private static void revealRecipesForItem(IJeiRuntime jei, IRecipeManager recipeManager, ResourceLocation itemId) {
+    private static void revealRecipesForItem(IJeiRuntime jei, IRecipeManager recipeManager, Identifier itemId) {
         List<HiddenRecipe> contributed = recipesByLockingItem.remove(itemId);
         revealContributedRecipes(recipeManager, contributed);
         // Idempotent fallback: clears any orphaned hideRecipes state (e.g. after older hide-order bugs or ref drift).
@@ -419,14 +429,14 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
         IJeiRuntime jei,
         IRecipeManager recipeManager,
         IIngredientType<FluidStack> fluidType,
-        ResourceLocation fluidId
+        Identifier fluidId
     ) {
         List<HiddenRecipe> contributed = recipesByLockingFluid.remove(fluidId);
         revealContributedRecipes(recipeManager, contributed);
         ensureOutputRecipesVisibleForFluid(jei, recipeManager, fluidType, fluidId);
     }
 
-    private static void ensureOutputRecipesVisibleForItem(IJeiRuntime jei, IRecipeManager recipeManager, ResourceLocation itemId) {
+    private static void ensureOutputRecipesVisibleForItem(IJeiRuntime jei, IRecipeManager recipeManager, Identifier itemId) {
         IIngredientManager ingredients = jei.getIngredientManager();
         var focusFactory = jei.getJeiHelpers().getFocusFactory();
         List<IFocus<?>> foci = new ArrayList<>();
@@ -436,7 +446,7 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
                 .forEach(s -> foci.add(focusFactory.createFocus(RecipeIngredientRole.OUTPUT, VanillaTypes.ITEM_STACK, s)));
 
         if (foci.isEmpty()) {
-            ItemStack probe = new ItemStack(BuiltInRegistries.ITEM.get(itemId));
+            ItemStack probe = BuiltInRegistries.ITEM.get(itemId).map(ItemStack::new).orElse(ItemStack.EMPTY);
             if (!probe.isEmpty()) {
                 foci.add(focusFactory.createFocus(RecipeIngredientRole.OUTPUT, VanillaTypes.ITEM_STACK, probe));
             }
@@ -451,9 +461,9 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
         IJeiRuntime jei,
         IRecipeManager recipeManager,
         IIngredientType<FluidStack> fluidType,
-        ResourceLocation fluidId
+        Identifier fluidId
     ) {
-        Fluid fluid = BuiltInRegistries.FLUID.get(fluidId);
+        Fluid fluid = BuiltInRegistries.FLUID.getValue(fluidId);
         if (fluid == null || fluid == Fluids.EMPTY) {
             return;
         }
@@ -481,24 +491,24 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
         }
     }
 
-    private static ResourceLocation chemicalIngredientId(Object ingredient) {
+    private static Identifier chemicalIngredientId(Object ingredient) {
         try {
             Class<?> mz = Class.forName("mekanism.client.recipe_viewer.jei.MekanismJEI");
             Object helper = mz.getField("CHEMICAL_STACK_HELPER").get(null);
             Class<?> cs = Class.forName("mekanism.api.chemical.ChemicalStack");
-            Object id = helper.getClass().getMethod("getResourceLocation", cs).invoke(helper, ingredient);
-            return id instanceof ResourceLocation rl ? rl : null;
+            Object id = helper.getClass().getMethod("getIdentifier", cs).invoke(helper, ingredient);
+            return id instanceof Identifier rl ? rl : null;
         } catch (ReflectiveOperationException | ClassCastException e) {
             return null;
         }
     }
 
     @Nullable
-    private static Object chemicalProbeStack(ResourceLocation chemicalId) {
+    private static Object chemicalProbeStack(Identifier chemicalId) {
         try {
             Class<?> api = Class.forName("mekanism.api.MekanismAPI");
             Object registry = api.getField("CHEMICAL_REGISTRY").get(null);
-            Object chemical = registry.getClass().getMethod("get", ResourceLocation.class).invoke(registry, chemicalId);
+            Object chemical = registry.getClass().getMethod("get", Identifier.class).invoke(registry, chemicalId);
             if (chemical == null) {
                 return null;
             }
@@ -514,7 +524,7 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
     private static void restoreChemicalIngredients(
             IIngredientManager ingredients,
             IIngredientType<Object> chemicalType,
-            ResourceLocation chemicalId
+            Identifier chemicalId
     ) {
         List<Object> stacks = chemicalIngredientSnapshots.remove(chemicalId);
         if (stacks != null && !stacks.isEmpty()) {
@@ -526,7 +536,7 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
     private static void hideIngredientsForChemical(
             IIngredientManager ingredients,
             IIngredientType<Object> chemicalType,
-            ResourceLocation chemicalId
+            Identifier chemicalId
     ) {
         List<Object> toHide = ingredients.getAllIngredients((IIngredientType) chemicalType).stream()
                 .filter(o -> chemicalId.equals(chemicalIngredientId(o)))
@@ -541,7 +551,7 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
             IJeiRuntime jei,
             IRecipeManager recipeManager,
             IIngredientType<Object> chemicalType,
-            ResourceLocation chemicalId
+            Identifier chemicalId
     ) {
         Object probe = chemicalProbeStack(chemicalId);
         if (probe == null) {
@@ -561,7 +571,7 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
             IJeiRuntime jei,
             IRecipeManager recipeManager,
             IIngredientType<Object> chemicalType,
-            ResourceLocation chemicalId
+            Identifier chemicalId
     ) {
         List<HiddenRecipe> contributed = recipesByLockingChemical.remove(chemicalId);
         revealContributedRecipes(recipeManager, contributed);
@@ -572,7 +582,7 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
             IJeiRuntime jei,
             IRecipeManager recipeManager,
             IIngredientType<Object> chemicalType,
-            ResourceLocation chemicalId
+            Identifier chemicalId
     ) {
         Object probe = chemicalProbeStack(chemicalId);
         if (probe == null) {
@@ -592,7 +602,7 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
         if (foci.isEmpty()) {
             return;
         }
-        for (RecipeType<?> recipeType : jei.getJeiHelpers().getAllRecipeTypes().toList()) {
+        for (IRecipeType<?> recipeType : jei.getJeiHelpers().getAllRecipeTypes().toList()) {
             IRecipeLookup<?> lookup = recipeManager.createRecipeLookup(recipeType);
             // Hidden recipes must be visible to the lookup, otherwise reconcile never fires unhide.
             List<?> found = lookup.limitFocus(foci).includeHidden().get().toList();
@@ -630,22 +640,22 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private static void hideRecipesUnchecked(IRecipeManager mgr, RecipeType<?> recipeType, List<?> recipes) {
+    private static void hideRecipesUnchecked(IRecipeManager mgr, IRecipeType<?> recipeType, List<?> recipes) {
         if (!recipes.isEmpty()) {
-            mgr.hideRecipes((RecipeType) recipeType, (List) recipes);
+            mgr.hideRecipes((IRecipeType) recipeType, (List) recipes);
         }
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private static void unhideRecipesUnchecked(IRecipeManager mgr, RecipeType<?> recipeType, List<?> recipes) {
+    private static void unhideRecipesUnchecked(IRecipeManager mgr, IRecipeType<?> recipeType, List<?> recipes) {
         if (!recipes.isEmpty()) {
-            mgr.unhideRecipes((RecipeType) recipeType, (List) recipes);
+            mgr.unhideRecipes((IRecipeType) recipeType, (List) recipes);
         }
     }
 
     @Override
-    public ResourceLocation getPluginUid() {
-        return ResourceLocation.fromNamespaceAndPath(Chapters.MOD_ID, "chapters_main");
+    public Identifier getPluginUid() {
+        return Identifier.fromNamespaceAndPath(Chapters.MOD_ID, "chapters_main");
     }
 
     @Override
@@ -676,7 +686,7 @@ public final class ChaptersJeiModPlugin implements IModPlugin {
         }
     }
 
-    private record HiddenRecipe(RecipeType<?> type, Object recipe) {
+    private record HiddenRecipe(IRecipeType<?> type, Object recipe) {
         HiddenRecipe {
             Objects.requireNonNull(type);
             Objects.requireNonNull(recipe);

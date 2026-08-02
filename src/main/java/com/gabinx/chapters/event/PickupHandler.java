@@ -2,7 +2,7 @@ package com.gabinx.chapters.event;
 
 import com.gabinx.chapters.stage.LockResolver;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.common.util.TriState;
+import net.minecraft.util.TriState;
 import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
 
 public final class PickupHandler {

@@ -4,7 +4,7 @@ import com.gabinx.chapters.stage.StageDefinition;
 import mekanism.api.MekanismAPI;
 import mekanism.api.chemical.Chemical;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 
 import java.util.HashMap;
@@ -21,21 +21,21 @@ public final class MekanismChemicalIndex {
     private MekanismChemicalIndex() {
     }
 
-    public static Map<ResourceLocation, Set<ResourceLocation>> buildIndex(List<StageDefinition> mergedDefinitions) {
-        Map<ResourceLocation, Set<ResourceLocation>> chemicalMap = new HashMap<>();
+    public static Map<Identifier, Set<Identifier>> buildIndex(List<StageDefinition> mergedDefinitions) {
+        Map<Identifier, Set<Identifier>> chemicalMap = new HashMap<>();
         var registry = MekanismAPI.CHEMICAL_REGISTRY;
 
         for (StageDefinition def : mergedDefinitions) {
-            for (ResourceLocation chemicalId : def.chemicals()) {
+            for (Identifier chemicalId : def.chemicals()) {
                 chemicalMap.computeIfAbsent(chemicalId, k -> new LinkedHashSet<>()).add(def.id());
             }
 
-            for (ResourceLocation tagId : def.chemicalTags()) {
+            for (Identifier tagId : def.chemicalTags()) {
                 TagKey<Chemical> tag = TagKey.create(registry.key(), tagId);
                 registry.getTag(tag).ifPresent(holders -> {
                     for (Holder<Chemical> holder : holders) {
                         Chemical chemical = holder.value();
-                        ResourceLocation key = registry.getKey(chemical);
+                        Identifier key = registry.getKey(chemical);
                         if (key != null && !MekanismAPI.EMPTY_CHEMICAL_NAME.equals(key)) {
                             chemicalMap.computeIfAbsent(key, k -> new LinkedHashSet<>()).add(def.id());
                         }
@@ -48,7 +48,7 @@ public final class MekanismChemicalIndex {
                     if (chemical == null || MekanismAPI.EMPTY_CHEMICAL_NAME.equals(registry.getKey(chemical))) {
                         continue;
                     }
-                    ResourceLocation key = registry.getKey(chemical);
+                    Identifier key = registry.getKey(chemical);
                     if (key != null && ns.equals(key.getNamespace())) {
                         chemicalMap.computeIfAbsent(key, k -> new LinkedHashSet<>()).add(def.id());
                     }

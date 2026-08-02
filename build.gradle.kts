@@ -1,9 +1,10 @@
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
 
 plugins {
     java
-    id("net.neoforged.moddev") version "2.0.74"
+    id("net.neoforged.moddev") version "2.0.141"
     id("me.modmuss50.mod-publish-plugin") version "1.1.0"
 }
 
@@ -15,8 +16,10 @@ base {
 }
 
 java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(21))
+    toolchain.languageVersion.set(JavaLanguageVersion.of(25))
 }
+
+val enableMekanism = findProperty("enable_mekanism")?.toString()?.toBoolean() == true
 
 repositories {
     mavenCentral()
@@ -42,11 +45,6 @@ repositories {
             includeGroup("mekanism")
         }
     }
-    maven("https://maven.architectury.dev/") {
-        content {
-            includeGroup("dev.architectury")
-        }
-    }
     maven("https://maven.ftb.dev/releases") {
         content {
             includeGroup("dev.ftb.mods")
@@ -56,11 +54,6 @@ repositories {
 
 neoForge {
     version = property("neo_version").toString()
-
-    parchment {
-        minecraftVersion = property("minecraft_version").toString()
-        mappingsVersion = "2024.11.17"
-    }
 
     mods {
         create(property("mod_id").toString()) {
@@ -84,6 +77,17 @@ neoForge {
     }
 }
 
+sourceSets {
+    named("main") {
+        java {
+            if (!enableMekanism) {
+                exclude("**/compat/mekanism/**")
+                exclude("**/mixin/compat/mekanism/**")
+            }
+        }
+    }
+}
+
 /**
  * Symlink each run directory's `kubejs/` to the canonical `kubejs/` at the project root
  * so KubeJS scripts (server_scripts, startup_scripts, client_scripts, config, assets, data)
@@ -101,25 +105,64 @@ val linkKubejs by tasks.registering {
 
     doLast {
         Files.createDirectories(rootKubejs)
+        val rootAbs = rootKubejs.toAbsolutePath().normalize()
         for (link in targets) {
             Files.createDirectories(link.parent)
-            val expectedTarget: Path = link.parent.relativize(rootKubejs)
-            if (Files.isSymbolicLink(link)) {
-                if (Files.readSymbolicLink(link) == expectedTarget) {
-                    continue
-                }
-                Files.delete(link)
-            } else if (Files.exists(link)) {
-                logger.warn("Skipping $link: not a symlink (move it aside if you want it overwritten).")
+            val expectedRelative: Path = link.parent.relativize(rootKubejs)
+
+            // Windows + WSL-copied reparse points: exists()/isSymbolicLink() can disagree; always clear first if needed.
+            val alreadyOk = try {
+                Files.isSymbolicLink(link) && Files.readSymbolicLink(link) == expectedRelative
+            } catch (_: Exception) {
+                false
+            }
+            if (alreadyOk) {
                 continue
             }
+
+            fun removeLinkOrDir(path: Path) {
+                if (!Files.exists(path, LinkOption.NOFOLLOW_LINKS) && !Files.isSymbolicLink(path)) {
+                    return
+                }
+                if (Files.isDirectory(path) && !Files.isSymbolicLink(path)) {
+                    path.toFile().deleteRecursively()
+                } else {
+                    Files.deleteIfExists(path)
+                }
+            }
+
             try {
-                Files.createSymbolicLink(link, expectedTarget)
-                logger.lifecycle("Linked $link -> $expectedTarget")
-            } catch (e: UnsupportedOperationException) {
-                logger.warn("Symlinks unsupported on this filesystem; copy kubejs/ manually into $link.")
-            } catch (e: SecurityException) {
-                logger.warn("No permission to create symlink at $link: ${e.message}")
+                removeLinkOrDir(link)
+            } catch (e: Exception) {
+                logger.warn("Could not clear $link before linking: ${e.message}")
+            }
+
+            var linked = false
+            try {
+                Files.createSymbolicLink(link, expectedRelative)
+                logger.lifecycle("Linked $link -> $expectedRelative")
+                linked = true
+            } catch (e: Exception) {
+                // Windows often blocks symlinks without Developer Mode; junctions work without elevation.
+                if (System.getProperty("os.name").lowercase().contains("windows")) {
+                    try {
+                        removeLinkOrDir(link)
+                        val code = ProcessBuilder("cmd", "/c", "mklink", "/J", link.toAbsolutePath().toString(), rootAbs.toString())
+                            .redirectErrorStream(true)
+                            .start()
+                            .also { it.inputStream.bufferedReader().use { r -> r.lines().forEach { line -> logger.lifecycle(line) } } }
+                            .waitFor()
+                        if (code == 0) {
+                            logger.lifecycle("Junction $link -> $rootAbs")
+                            linked = true
+                        }
+                    } catch (junctionError: Exception) {
+                        logger.warn("Junction fallback failed for $link: ${junctionError.message}")
+                    }
+                }
+                if (!linked) {
+                    logger.warn("Could not link $link (${e.message}). Ensure $link points at project kubejs/.")
+                }
             }
         }
     }
@@ -132,22 +175,30 @@ dependencies {
     compileOnly("dev.latvian.mods:kubejs-neoforge:${property("kubejs_version")}")
     runtimeOnly("dev.latvian.mods:kubejs-neoforge:${property("kubejs_version")}")
     runtimeOnly("dev.latvian.mods:rhino:${property("rhino_version")}")
+    // KubeJS 26.1.2-8.0.4 embeds better-advanced-tooltips build.8 (broken ItemStack mixin on 26.1.2).
+    // JarJar build.9+ so NeoForge selects the fixed jar over KubeJS's embedded copy for published + dev runs.
+    val batVersion = property("better_advanced_tooltips_version").toString()
+    jarJar(implementation("dev.latvian.mods:better-advanced-tooltips") {
+        version {
+            strictly("[2601.1.0-build.9,)")
+            prefer(batVersion)
+        }
+    })
     val minecraftVersion = property("minecraft_version").toString()
     val jeiVersion = property("jei_version").toString()
     compileOnly("mezz.jei:jei-$minecraftVersion-neoforge:$jeiVersion")
     runtimeOnly("mezz.jei:jei-$minecraftVersion-neoforge:$jeiVersion")
 
-    val mekanismVersion = property("mekanism_version").toString()
-    compileOnly("mekanism:Mekanism:$mekanismVersion:api")
+    if (enableMekanism) {
+        val mekanismVersion = property("mekanism_version").toString()
+        compileOnly("mekanism:Mekanism:$mekanismVersion:api")
+    }
 
-    val architecturyVersion = property("architectury_version").toString()
     val ftbLibraryVersion = property("ftb_library_version").toString()
     val ftbTeamsVersion = property("ftb_teams_version").toString()
     val ftbQuestsVersion = property("ftb_quests_version").toString()
-    compileOnly("dev.architectury:architectury-neoforge:$architecturyVersion")
     compileOnly("dev.ftb.mods:ftb-library-neoforge:$ftbLibraryVersion")
     compileOnly("dev.ftb.mods:ftb-teams-neoforge:$ftbTeamsVersion")
-    runtimeOnly("dev.architectury:architectury-neoforge:$architecturyVersion")
     runtimeOnly("dev.ftb.mods:ftb-library-neoforge:$ftbLibraryVersion")
     runtimeOnly("dev.ftb.mods:ftb-teams-neoforge:$ftbTeamsVersion")
     runtimeOnly("dev.ftb.mods:ftb-quests-neoforge:$ftbQuestsVersion")

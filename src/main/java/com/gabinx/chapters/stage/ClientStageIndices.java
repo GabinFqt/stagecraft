@@ -1,6 +1,6 @@
 package com.gabinx.chapters.stage;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -18,19 +18,19 @@ import java.util.Set;
  * {@link StageManager} singleton.
  */
 public final class ClientStageIndices {
-    private static volatile Map<ResourceLocation, Set<ResourceLocation>> items = Map.of();
-    private static volatile Map<ResourceLocation, Set<ResourceLocation>> fluids = Map.of();
-    private static volatile Map<ResourceLocation, Set<ResourceLocation>> chemicals = Map.of();
-    private static volatile Map<ResourceLocation, Set<ResourceLocation>> recipes = Map.of();
+    private static volatile Map<Identifier, Set<Identifier>> items = Map.of();
+    private static volatile Map<Identifier, Set<Identifier>> fluids = Map.of();
+    private static volatile Map<Identifier, Set<Identifier>> chemicals = Map.of();
+    private static volatile Map<Identifier, Set<Identifier>> recipes = Map.of();
 
     private ClientStageIndices() {
     }
 
     public static synchronized void replace(
-            Map<ResourceLocation, Set<ResourceLocation>> nextItems,
-            Map<ResourceLocation, Set<ResourceLocation>> nextFluids,
-            Map<ResourceLocation, Set<ResourceLocation>> nextChemicals,
-            Map<ResourceLocation, Set<ResourceLocation>> nextRecipes
+            Map<Identifier, Set<Identifier>> nextItems,
+            Map<Identifier, Set<Identifier>> nextFluids,
+            Map<Identifier, Set<Identifier>> nextChemicals,
+            Map<Identifier, Set<Identifier>> nextRecipes
     ) {
         items = freeze(nextItems);
         fluids = freeze(nextFluids);
@@ -38,30 +38,30 @@ public final class ClientStageIndices {
         recipes = freeze(nextRecipes);
     }
 
-    public static Map<ResourceLocation, Set<ResourceLocation>> itemsView() {
+    public static Map<Identifier, Set<Identifier>> itemsView() {
         return items;
     }
 
-    public static Map<ResourceLocation, Set<ResourceLocation>> fluidsView() {
+    public static Map<Identifier, Set<Identifier>> fluidsView() {
         return fluids;
     }
 
-    public static Map<ResourceLocation, Set<ResourceLocation>> chemicalsView() {
+    public static Map<Identifier, Set<Identifier>> chemicalsView() {
         return chemicals;
     }
 
-    public static Map<ResourceLocation, Set<ResourceLocation>> recipesView() {
+    public static Map<Identifier, Set<Identifier>> recipesView() {
         return recipes;
     }
 
-    private static Map<ResourceLocation, Set<ResourceLocation>> freeze(
-            Map<ResourceLocation, Set<ResourceLocation>> next
+    private static Map<Identifier, Set<Identifier>> freeze(
+            Map<Identifier, Set<Identifier>> next
     ) {
         if (next == null || next.isEmpty()) {
             return Map.of();
         }
-        Map<ResourceLocation, Set<ResourceLocation>> copy = new LinkedHashMap<>(next.size());
-        for (Map.Entry<ResourceLocation, Set<ResourceLocation>> e : next.entrySet()) {
+        Map<Identifier, Set<Identifier>> copy = new LinkedHashMap<>(next.size());
+        for (Map.Entry<Identifier, Set<Identifier>> e : next.entrySet()) {
             copy.put(e.getKey(), Set.copyOf(e.getValue()));
         }
         return Collections.unmodifiableMap(copy);

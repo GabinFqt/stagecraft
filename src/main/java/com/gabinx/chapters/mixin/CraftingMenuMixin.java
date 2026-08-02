@@ -2,8 +2,9 @@ package com.gabinx.chapters.mixin;
 
 import com.gabinx.chapters.stage.LockResolver;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -14,7 +15,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
-import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
@@ -36,27 +36,20 @@ public abstract class CraftingMenuMixin {
     )
     private static void chapters$hideLockedResult(
         AbstractContainerMenu menu,
-        Level level,
+        ServerLevel level,
         net.minecraft.world.entity.player.Player player,
         CraftingContainer craftSlots,
         ResultContainer resultSlots,
         @Nullable RecipeHolder<CraftingRecipe> recipe,
         CallbackInfo ci,
-        CraftingInput craftingInput,
+        CraftingInput input,
         ServerPlayer serverPlayer,
         ItemStack result
     ) {
-        if (level.isClientSide) {
-            return;
-        }
-
-        ResourceLocation recipeId = null;
-        if (level.getServer() != null) {
-            Optional<RecipeHolder<CraftingRecipe>> resolved = level.getServer()
-                    .getRecipeManager()
-                    .getRecipeFor(RecipeType.CRAFTING, craftingInput, level, recipe);
-            recipeId = resolved.map(RecipeHolder::id).orElse(null);
-        }
+        Optional<RecipeHolder<CraftingRecipe>> resolved = level.getServer()
+                .getRecipeManager()
+                .getRecipeFor(RecipeType.CRAFTING, input, level, recipe);
+        Identifier recipeId = resolved.map(holder -> holder.id().identifier()).orElse(null);
         boolean outputLocked = !result.isEmpty() && LockResolver.isLocked(serverPlayer, result);
         boolean recipeLocked = recipeId != null && LockResolver.isRecipeLocked(serverPlayer, recipeId);
         if (!(outputLocked || recipeLocked)) {

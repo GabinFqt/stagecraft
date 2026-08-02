@@ -2,7 +2,7 @@ package com.gabinx.chapters.compat.kubejs;
 
 import com.gabinx.chapters.stage.StageDefinition;
 import com.gabinx.chapters.stage.StageManager;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.material.Fluid;
@@ -15,18 +15,18 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class ChaptersKubeJSBridge {
-    private static final Map<ResourceLocation, Collection<String>> RAW = new ConcurrentHashMap<>();
+    private static final Map<Identifier, Collection<String>> RAW = new ConcurrentHashMap<>();
     private static volatile boolean flushScheduled;
 
     private ChaptersKubeJSBridge() {
     }
 
-    public static void defineStage(ResourceLocation id, Collection<String> entries) {
+    public static void defineStage(Identifier id, Collection<String> entries) {
         RAW.put(id, new ArrayList<>(entries));
         flushScheduled = true;
     }
 
-    public static void clearStage(ResourceLocation id) {
+    public static void clearStage(Identifier id) {
         RAW.remove(id);
         flushScheduled = true;
     }
@@ -46,17 +46,17 @@ public final class ChaptersKubeJSBridge {
     private static void flushToStageManager() {
         var defs = new ArrayList<StageDefinition>();
         for (var entry : RAW.entrySet()) {
-            ResourceLocation id = entry.getKey();
-            var items = new LinkedHashSet<ResourceLocation>();
+            Identifier id = entry.getKey();
+            var items = new LinkedHashSet<Identifier>();
             var tags = new LinkedHashSet<TagKey<Item>>();
             var namespaces = new LinkedHashSet<String>();
-            var fluids = new LinkedHashSet<ResourceLocation>();
+            var fluids = new LinkedHashSet<Identifier>();
             var fluidTags = new LinkedHashSet<TagKey<Fluid>>();
             var fluidNamespaces = new LinkedHashSet<String>();
-            var chemicals = new LinkedHashSet<ResourceLocation>();
-            var chemicalTags = new LinkedHashSet<ResourceLocation>();
+            var chemicals = new LinkedHashSet<Identifier>();
+            var chemicalTags = new LinkedHashSet<Identifier>();
             var chemicalNamespaces = new LinkedHashSet<String>();
-            var recipes = new LinkedHashSet<ResourceLocation>();
+            var recipes = new LinkedHashSet<Identifier>();
 
             for (String raw : entry.getValue()) {
                 if (raw != null && raw.regionMatches(true, 0, "fluid:", 0, 6)) {

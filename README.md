@@ -1,4 +1,4 @@
-# Chapters (NeoForge 1.21.1)
+# Chapters (NeoForge 26.1.2)
 
 <p align="center">
   <img src="src/main/resources/chapters_logo.png" alt="Chapters logo" width="384">
@@ -135,8 +135,8 @@ For more advanced reward flows (e.g. granting a chapter conditionally), pair FTB
 ## Development
 
 Requirements:
-- Java 21
-- NeoForge 21.1.x
+- Java 25
+- NeoForge 26.1.x
 
 Build:
 
@@ -150,7 +150,7 @@ Example KubeJS scripts for local testing live under [`examples/kubejs/`](example
 
 ## Releases
 
-Tag source releases as `v1.0`, `v1.1`, … matching `mod_version` in [`gradle.properties`](gradle.properties). Attach the built jar from `build/libs/` (after `./gradlew build`) to the GitHub Release.
+Tag source releases as `v2.0`, `v2.1`, … matching `mod_version` in [`gradle.properties`](gradle.properties). Pushing a `v*` tag runs GitHub Actions (build, GitHub Release, Modrinth + CurseForge via `publishMods`).
 
 ### Publishing to Modrinth and CurseForge
 

@@ -1,7 +1,8 @@
 package com.gabinx.chapters.stage;
 
 import com.mojang.serialization.Codec;
-import net.minecraft.resources.ResourceLocation;
+import com.mojang.serialization.MapCodec;
+import net.minecraft.resources.Identifier;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -10,12 +11,15 @@ import java.util.List;
 import java.util.Set;
 
 public final class PlayerStages {
-    public static final Codec<PlayerStages> CODEC = ResourceLocation.CODEC.listOf()
+    public static final Codec<PlayerStages> CODEC = Identifier.CODEC.listOf()
             .xmap(PlayerStages::new, stages -> List.copyOf(stages.stages));
 
-    private final Set<ResourceLocation> stages;
+    /** Attachment persistence expects a {@link MapCodec}. */
+    public static final MapCodec<PlayerStages> MAP_CODEC = CODEC.fieldOf("stages");
 
-    public PlayerStages(Collection<ResourceLocation> stages) {
+    private final Set<Identifier> stages;
+
+    public PlayerStages(Collection<Identifier> stages) {
         this.stages = new LinkedHashSet<>(stages);
     }
 
@@ -23,19 +27,19 @@ public final class PlayerStages {
         return new PlayerStages(List.of());
     }
 
-    public Set<ResourceLocation> view() {
+    public Set<Identifier> view() {
         return Collections.unmodifiableSet(stages);
     }
 
-    public boolean add(ResourceLocation stage) {
+    public boolean add(Identifier stage) {
         return stages.add(stage);
     }
 
-    public boolean remove(ResourceLocation stage) {
+    public boolean remove(Identifier stage) {
         return stages.remove(stage);
     }
 
-    public boolean has(ResourceLocation stage) {
+    public boolean has(Identifier stage) {
         return stages.contains(stage);
     }
 }

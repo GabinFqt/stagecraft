@@ -1,6 +1,6 @@
 package com.gabinx.chapters.compat.jei;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.Set;
 
@@ -9,10 +9,10 @@ public final class ChaptersJeiPlugin {
     }
 
     public static void onLockedIngredientsChanged(
-            Set<ResourceLocation> lockedItems,
-            Set<ResourceLocation> lockedFluids,
-            Set<ResourceLocation> lockedChemicals,
-            Set<ResourceLocation> lockedRecipes
+            Set<Identifier> lockedItems,
+            Set<Identifier> lockedFluids,
+            Set<Identifier> lockedChemicals,
+            Set<Identifier> lockedRecipes
     ) {
         ChaptersJeiModPlugin.applyLocked(lockedItems, lockedFluids, lockedChemicals, lockedRecipes);
     }

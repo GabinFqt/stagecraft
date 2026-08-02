@@ -13,7 +13,8 @@ import com.gabinx.chapters.stage.StageManager;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.AddReloadListenerEvent;
+import net.minecraft.resources.Identifier;
+import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import org.slf4j.Logger;
 
@@ -21,6 +22,8 @@ import org.slf4j.Logger;
 public final class Chapters {
     public static final String MOD_ID = "chapters";
     public static final Logger LOGGER = LogUtils.getLogger();
+    public static final Identifier STAGE_RELOAD_LISTENER_ID =
+            Identifier.fromNamespaceAndPath(MOD_ID, "stages");
 
     public Chapters(IEventBus modBus) {
         ChaptersRegistries.register(modBus);
@@ -43,7 +46,7 @@ public final class Chapters {
         ChaptersCommand.register(event.getDispatcher());
     }
 
-    private void onAddReloadListener(AddReloadListenerEvent event) {
-        event.addListener(StageManager.get());
+    private void onAddReloadListener(AddServerReloadListenersEvent event) {
+        event.addListener(STAGE_RELOAD_LISTENER_ID, StageManager.get());
     }
 }

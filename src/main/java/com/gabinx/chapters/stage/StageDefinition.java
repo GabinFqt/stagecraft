@@ -4,7 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -17,30 +17,30 @@ import java.util.Objects;
 import java.util.Set;
 
 public record StageDefinition(
-        ResourceLocation id,
-        Set<ResourceLocation> items,
+        Identifier id,
+        Set<Identifier> items,
         Set<TagKey<Item>> tags,
         Set<String> namespaces,
-        Set<ResourceLocation> fluids,
+        Set<Identifier> fluids,
         Set<TagKey<Fluid>> fluidTags,
         Set<String> fluidNamespaces,
-        Set<ResourceLocation> chemicals,
-        Set<ResourceLocation> chemicalTags,
+        Set<Identifier> chemicals,
+        Set<Identifier> chemicalTags,
         Set<String> chemicalNamespaces,
         /** Crafting (and other) recipe holder ids to lock until the player has this stage. */
-        Set<ResourceLocation> recipes) {
+        Set<Identifier> recipes) {
 
-    public static StageDefinition fromJson(ResourceLocation id, JsonObject json) {
-        Set<ResourceLocation> items = new LinkedHashSet<>();
+    public static StageDefinition fromJson(Identifier id, JsonObject json) {
+        Set<Identifier> items = new LinkedHashSet<>();
         Set<TagKey<Item>> tags = new LinkedHashSet<>();
         Set<String> namespaces = new LinkedHashSet<>();
-        Set<ResourceLocation> fluids = new LinkedHashSet<>();
+        Set<Identifier> fluids = new LinkedHashSet<>();
         Set<TagKey<Fluid>> fluidTags = new LinkedHashSet<>();
         Set<String> fluidNamespaces = new LinkedHashSet<>();
-        Set<ResourceLocation> chemicals = new LinkedHashSet<>();
-        Set<ResourceLocation> chemicalTags = new LinkedHashSet<>();
+        Set<Identifier> chemicals = new LinkedHashSet<>();
+        Set<Identifier> chemicalTags = new LinkedHashSet<>();
         Set<String> chemicalNamespaces = new LinkedHashSet<>();
-        Set<ResourceLocation> recipes = new LinkedHashSet<>();
+        Set<Identifier> recipes = new LinkedHashSet<>();
 
         JsonArray namespacesJson = json.getAsJsonArray("namespaces");
         if (namespacesJson != null) {
@@ -140,7 +140,7 @@ public record StageDefinition(
      */
     public static void accumulateEntry(
             String raw,
-            Set<ResourceLocation> itemsOut,
+            Set<Identifier> itemsOut,
             Set<TagKey<Item>> tagsOut,
             Set<String> namespacesOut) {
         if (raw == null) {
@@ -151,7 +151,7 @@ public record StageDefinition(
             return;
         }
         if (trimmed.startsWith("#")) {
-            ResourceLocation tagId = ResourceLocation.tryParse(trimmed.substring(1).trim());
+            Identifier tagId = Identifier.tryParse(trimmed.substring(1).trim());
             if (tagId != null) {
                 tagsOut.add(TagKey.create(BuiltInRegistries.ITEM.key(), tagId));
             }
@@ -161,7 +161,7 @@ public record StageDefinition(
             addNamespace(namespacesOut, trimmed.substring(1));
             return;
         }
-        ResourceLocation itemId = ResourceLocation.tryParse(trimmed);
+        Identifier itemId = Identifier.tryParse(trimmed);
         if (itemId != null) {
             itemsOut.add(itemId);
         }
@@ -182,7 +182,7 @@ public record StageDefinition(
             return;
         }
         try {
-            ResourceLocation.fromNamespaceAndPath(s, "x");
+            Identifier.fromNamespaceAndPath(s, "x");
             namespacesOut.add(s);
         } catch (IllegalArgumentException ignored) {
         }
@@ -202,7 +202,7 @@ public record StageDefinition(
      */
     public static void accumulateFluidEntry(
             String raw,
-            Set<ResourceLocation> fluidsOut,
+            Set<Identifier> fluidsOut,
             Set<TagKey<Fluid>> fluidTagsOut,
             Set<String> fluidNamespacesOut) {
         if (raw == null) {
@@ -213,7 +213,7 @@ public record StageDefinition(
             return;
         }
         if (trimmed.startsWith("#")) {
-            ResourceLocation tagId = ResourceLocation.tryParse(trimmed.substring(1).trim());
+            Identifier tagId = Identifier.tryParse(trimmed.substring(1).trim());
             if (tagId != null) {
                 fluidTagsOut.add(TagKey.create(BuiltInRegistries.FLUID.key(), tagId));
             }
@@ -223,7 +223,7 @@ public record StageDefinition(
             addFluidNamespace(fluidNamespacesOut, trimmed.substring(1));
             return;
         }
-        ResourceLocation fluidId = ResourceLocation.tryParse(trimmed);
+        Identifier fluidId = Identifier.tryParse(trimmed);
         if (fluidId != null) {
             fluidsOut.add(fluidId);
         }
@@ -235,8 +235,8 @@ public record StageDefinition(
      */
     public static void accumulateChemicalEntry(
             String raw,
-            Set<ResourceLocation> chemicalsOut,
-            Set<ResourceLocation> chemicalTagIdsOut,
+            Set<Identifier> chemicalsOut,
+            Set<Identifier> chemicalTagIdsOut,
             Set<String> chemicalNamespacesOut) {
         if (raw == null) {
             return;
@@ -246,7 +246,7 @@ public record StageDefinition(
             return;
         }
         if (trimmed.startsWith("#")) {
-            ResourceLocation tagId = ResourceLocation.tryParse(trimmed.substring(1).trim());
+            Identifier tagId = Identifier.tryParse(trimmed.substring(1).trim());
             if (tagId != null) {
                 chemicalTagIdsOut.add(tagId);
             }
@@ -256,7 +256,7 @@ public record StageDefinition(
             addChemicalNamespace(chemicalNamespacesOut, trimmed.substring(1));
             return;
         }
-        ResourceLocation chemicalId = ResourceLocation.tryParse(trimmed);
+        Identifier chemicalId = Identifier.tryParse(trimmed);
         if (chemicalId != null) {
             chemicalsOut.add(chemicalId);
         }
@@ -265,7 +265,7 @@ public record StageDefinition(
     /**
      * One stage-list recipe entry: exact recipe id ({@code minecraft:stick}).
      */
-    public static void accumulateRecipeEntry(String raw, Set<ResourceLocation> recipesOut) {
+    public static void accumulateRecipeEntry(String raw, Set<Identifier> recipesOut) {
         if (raw == null) {
             return;
         }
@@ -273,14 +273,14 @@ public record StageDefinition(
         if (trimmed.isEmpty()) {
             return;
         }
-        ResourceLocation recipeId = ResourceLocation.tryParse(trimmed);
+        Identifier recipeId = Identifier.tryParse(trimmed);
         if (recipeId != null) {
             recipesOut.add(recipeId);
         }
     }
 
     public boolean matches(ItemStack stack) {
-        ResourceLocation key = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        Identifier key = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (items.contains(key)) {
             return true;
         }
@@ -300,7 +300,7 @@ public record StageDefinition(
      * {@code minecraft:milk} vs {@code minecraft:flowing_milk}) share one logical fluid for stages; match on the
      * source fluid id like filled buckets do.
      */
-    public static ResourceLocation fluidKindRegistryKey(Fluid fluid) {
+    public static Identifier fluidKindRegistryKey(Fluid fluid) {
         if (fluid instanceof FlowingFluid flowing) {
             return BuiltInRegistries.FLUID.getKey(flowing.getSource());
         }
@@ -312,7 +312,7 @@ public record StageDefinition(
             return false;
         }
 
-        ResourceLocation kindKey = fluidKindRegistryKey(stack.getFluid());
+        Identifier kindKey = fluidKindRegistryKey(stack.getFluid());
         if (kindKey != null && fluids.contains(kindKey)) {
             return true;
         }

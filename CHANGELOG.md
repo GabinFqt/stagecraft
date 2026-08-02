@@ -1,3 +1,25 @@
+# Chapters 2.0
+
+Major port to **Minecraft / NeoForge 26.1.2** (Java **25**).
+
+## Changes
+- Full API port for NeoForge 26.1 (`Identifier`, networking, attachments, FTB/JEI/KubeJS adaptations).
+- Vanilla bucket pickup/place and cauldron interactions are gated when fluids are locked (replaces the removed fill-bucket event path).
+- Mekanism chemical compat is compiled out until a 26.1 Mekanism release exists (`enable_mekanism=false`).
+- Works around KubeJS embedding a broken Better Advanced Tooltips build.8 by Jar-in-Jaring BAT **2601.1.0-build.9+** so NeoForge selects the fixed jar at runtime.
+- Dev runs: Alice (`runClient`) and Bob (`runClientBob`) plus shared root `kubejs/` linking for dual-client testing.
+
+## Requirements
+- Minecraft 26.1.2
+- NeoForge 26.1.x
+- Java 25
+- JEI (optional, to hide locked recipes/items client-side)
+- KubeJS (optional)
+- FTB Library / FTB Teams / FTB Quests (all optional; auto-detected at runtime)
+- Mekanism (optional; not available for 26.1 in this release)
+
+---
+
 # Chapters 1.1
 
 FTB Library / FTB Teams / FTB Quests integration.

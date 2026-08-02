@@ -25,3 +25,7 @@ GUI transfers vs unattended automation can differ — don’t rely on pipes alon
 ## Odd JEI
 
 Reconnect; keep **matching Chapters jars** client/server; flip **`/chapters add/remove`** once to poke a fresh sync after big script edits.
+
+## Client crash with KubeJS (Better Advanced Tooltips)
+
+KubeJS `26.1.2-8.0.4` embeds **Better Advanced Tooltips** build.8, which breaks on Minecraft 26.1.2. Chapters **2.0** Jar-in-Jars BAT **build.9+** so NeoForge selects the fixed copy. If you still crash, update Chapters, or install a standalone BAT build.9+ / a newer KubeJS that embeds it.

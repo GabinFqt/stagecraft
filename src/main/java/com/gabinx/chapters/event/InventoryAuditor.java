@@ -25,7 +25,10 @@ public final class InventoryAuditor {
     public static void auditNow(ServerPlayer player) {
         for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
             ItemStack stack = player.getInventory().getItem(slot);
-            if (stack.isEmpty() || !LockResolver.isLocked(player, stack)) {
+            if (stack.isEmpty()) {
+                continue;
+            }
+            if (!LockResolver.isLocked(player, stack)) {
                 continue;
             }
 

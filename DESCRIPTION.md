@@ -8,7 +8,7 @@ This file holds **two paste-ready descriptions**: [Modrinth](#modrinth) (markdow
 
 **Full documentation (datapacks, KubeJS, FTB, examples): [GitHub Wiki](https://github.com/GabinFqt/chapters/wiki)**
 
-**Chapters** is a progression mod for **NeoForge 1.21.1** inspired by *GameStages* and *ItemStages*. It lets you split your modpack into named "chapters" (stages) and gate **items, fluids, Mekanism chemicals, and recipes** behind them, so players cannot interact with locked content until you unlock the stage.
+**Chapters** is a progression mod for **NeoForge 26.1.2** inspired by *GameStages* and *ItemStages*. It lets you split your modpack into named "chapters" (stages) and gate **items, fluids, Mekanism chemicals, and recipes** behind them, so players cannot interact with locked content until you unlock the stage.
 
 It targets pack authors who want **one integrated tool** for progression on modern NeoForge, with first-class support for **datapacks**, **KubeJS**, **JEI**, **Mekanism**, and **FTB** (Library, Teams, Quests).
 
@@ -118,11 +118,11 @@ The jar ships **no** preset stages. Quick test: add a datapack stage gating `min
 
 | Mod | Notes |
 | --- | --- |
-| NeoForge 1.21.1 (21.1.x) | Required |
-| Java 21 | Required |
+| NeoForge 26.1.2 (26.1.x) | Required |
+| Java 25 | Required |
 | JEI | Optional. Hides locked content client-side |
 | KubeJS | Optional. Bindings load automatically |
-| Mekanism | Optional. Chemical locking; without it, chemical keys in JSON are ignored at index time |
+| Mekanism | Optional when a 26.1 build exists; chemical locking disabled in this release |
 | FTB Library | Optional. Stage provider for FTB Quests UI |
 | FTB Teams | Optional. Shared team stages when Library + Teams are both present |
 | FTB Quests | Optional. Stage Reward / Task / Stage Required |
@@ -145,7 +145,7 @@ Copy from the next line through the end of this section (CurseForge project desc
 
 **Documentation (datapacks, KubeJS, FTB, examples):** https://github.com/GabinFqt/chapters/wiki
 
-**Chapters** is a progression mod for **NeoForge 1.21.1**, inspired by *GameStages* and *ItemStages*. Name your progression steps *chapters* (stages) and lock **items**, **fluids**, **Mekanism chemicals**, and **recipes** until you unlock them, so players cannot use gated content early.
+**Chapters** is a progression mod for **NeoForge 26.1.2**, inspired by *GameStages* and *ItemStages*. Name your progression steps *chapters* (stages) and lock **items**, **fluids**, **Mekanism chemicals**, and **recipes** until you unlock them, so players cannot use gated content early.
 
 Built for pack authors who want **one integrated progression layer** on modern NeoForge: datapacks, KubeJS, JEI, Mekanism, and FTB (Library, Teams, Quests).
 
@@ -205,10 +205,10 @@ Example scripts: **examples/kubejs** on [GitHub](https://github.com/GabinFqt/cha
 
 ## Compatibility
 
-- **NeoForge 1.21.1** and **Java 21** (*required*).
+- **NeoForge 26.1.2** and **Java 25** (*required*).
 - **JEI** (*optional*): hides locked content in the recipe viewer.
 - **KubeJS** (*optional*): **ChaptersEvents** and **PlayerStages** when present.
-- **Mekanism** (*optional*): chemical locking.
+- **Mekanism** (*optional* when available for 26.1): chemical locking (not enabled in this release).
 - **FTB Library** (*optional*): wires Chapters into FTB Quests stage UI.
 - **FTB Teams** (*optional*): **shared team stages** when Library and Teams are both loaded.
 - **FTB Quests** (*optional*): Stage Reward, Stage Task, Stage Required.

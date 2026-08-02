@@ -1,6 +1,6 @@
 # Examples
 
-For **NeoForge 1.21.1** + **Chapters**. Pick namespaces to match **your** pack (`mypack`, etc.). **`/reload`** after datapack changes; grant stages with **`/chapters add <player> namespace:stage`**.
+For **NeoForge 26.1.2** + **Chapters**. Pick namespaces to match **your** pack (`mypack`, etc.). **`/reload`** after datapack changes; grant stages with **`/chapters add <player> namespace:stage`**.
 
 [**Tutorial datapack (real files)**](https://github.com/GabinFqt/chapters/tree/main/examples/datapack/tutorial) — same filenames as snippets below where noted.
 

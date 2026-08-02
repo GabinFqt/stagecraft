@@ -6,12 +6,12 @@ import com.gabinx.chapters.stage.ClientStageCache;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-public record ClientboundStageDeltaPayload(ResourceLocation stage, boolean added) implements CustomPacketPayload {
+public record ClientboundStageDeltaPayload(Identifier stage, boolean added) implements CustomPacketPayload {
     public static final Type<ClientboundStageDeltaPayload> TYPE =
-            new Type<>(ResourceLocation.fromNamespaceAndPath(Chapters.MOD_ID, "stage_delta"));
+            new Type<>(Identifier.fromNamespaceAndPath(Chapters.MOD_ID, "stage_delta"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, ClientboundStageDeltaPayload> STREAM_CODEC =
             StreamCodec.of(
@@ -20,11 +20,11 @@ public record ClientboundStageDeltaPayload(ResourceLocation stage, boolean added
             );
 
     private ClientboundStageDeltaPayload(RegistryFriendlyByteBuf buffer) {
-        this(buffer.readResourceLocation(), buffer.readBoolean());
+        this(buffer.readIdentifier(), buffer.readBoolean());
     }
 
     private void write(RegistryFriendlyByteBuf buffer) {
-        buffer.writeResourceLocation(stage);
+        buffer.writeIdentifier(stage);
         buffer.writeBoolean(added);
     }
 
