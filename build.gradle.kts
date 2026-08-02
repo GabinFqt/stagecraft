@@ -5,7 +5,7 @@ import java.nio.file.Path
 plugins {
     java
     id("net.neoforged.moddev") version "2.0.141"
-    id("me.modmuss50.mod-publish-plugin") version "1.1.0"
+    id("me.modmuss50.mod-publish-plugin") version "2.2.0"
 }
 
 group = property("mod_group_id")!!
@@ -240,12 +240,10 @@ publishMods {
             accessToken = providers.environmentVariable("MODRINTH_TOKEN")
             projectId = modrinthProjectId
             minecraftVersions.add(property("minecraft_version").toString())
+            // FTB mods are CurseForge-only (no Modrinth projects).
             optional { slug = "jei" }
             optional { slug = "kubejs" }
             optional { slug = "mekanism" }
-            optional { slug = "ftb-library" }
-            optional { slug = "ftb-teams" }
-            optional { slug = "ftb-quests" }
         }
     }
 
@@ -255,6 +253,9 @@ publishMods {
             accessToken = providers.environmentVariable("CURSEFORGE_TOKEN")
             projectId = curseforgeProjectId
             minecraftVersions.add(property("minecraft_version").toString())
+            // Required by CurseForge's environment version group.
+            client = true
+            server = true
             optional { slug = "jei" }
             optional { slug = "kubejs" }
             optional { slug = "mekanism" }
